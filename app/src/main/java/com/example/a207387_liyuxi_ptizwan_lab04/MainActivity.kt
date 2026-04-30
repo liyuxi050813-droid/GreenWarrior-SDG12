@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -32,6 +33,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
 import com.example.a207387_liyuxi_ptizwan_lab04.ui.theme.A207387_LiYuxi_PtIzwan_Lab04Theme
 
 object Routes {
@@ -39,6 +43,8 @@ object Routes {
     const val EDIT_PROFILE = "edit_profile"
     const val PREVIEW = "preview"
     const val SET_TARGET = "set_target"
+    const val ADD_LOG = "add_log"
+    const val LOG_LIST = "log_list"
 }//1我的项目有四个屏幕，定义了每个屏幕的路由常量
 
 class MainActivity : ComponentActivity() {
@@ -81,6 +87,12 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 viewModel = viewModel
                             )
+                        }
+                        composable(Routes.ADD_LOG) {
+                            AddLogScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.LOG_LIST) {
+                            LogListScreen(navController = navController, viewModel = viewModel)
                         }
                     }
                 }
@@ -301,12 +313,25 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 预览按钮
-            Button(
-                onClick = { navController.navigate(Routes.PREVIEW) },
+            // 替换原有的 Preview 按钮为两个按钮：
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Preview My Profile")
+                Button(
+                    onClick = { navController.navigate(Routes.ADD_LOG) },
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("Add Log")
+                }
+                Button(
+                    onClick = { navController.navigate(Routes.LOG_LIST) },
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("View Logs")
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -319,7 +344,9 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)
+
+            ) {
                 TaskRow("🚲", "Cycle to Work", "Save 1.5kg CO2! Choose cycling over driving.") {
                     viewModel.reduceCO2(2)
                 }
@@ -561,6 +588,131 @@ fun SetTargetScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save Target")
+        }
+    }
+}
+@Composable
+fun AddLogScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    var activityName by remember { mutableStateOf("") }
+    var emissionAmount by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .statusBarsPadding(),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "Add Emission Log",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = activityName,
+            onValueChange = { activityName = it },
+            label = { Text("Activity Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = emissionAmount,
+            onValueChange = { emissionAmount = it },
+            label = { Text("Emission Amount (kg)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = errorMessage.isNotBlank()
+        )
+        if (errorMessage.isNotBlank()) {
+            Text(
+                errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                val amountInt = emissionAmount.toIntOrNull()
+                if (activityName.isBlank() || amountInt == null || amountInt <= 0) {
+                    errorMessage = "Please enter valid name and positive number"
+                } else {
+                    viewModel.addEmissionLog(activityName, amountInt)
+                    navController.navigateUp()
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Text("Save Log")
+        }
+    }
+}
+@Composable
+fun LogListScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    val logList by viewModel.logList.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        Text(
+            "Emission Logs",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (logList.isEmpty()) {
+            Text(
+                "No logs yet. Add your first activity!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(logList, key = { it.id }) { log ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                log.activityName,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${log.emissionAmount} kg",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { navController.popBackStack(Routes.HOME, inclusive = false) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to Home")
         }
     }
 }

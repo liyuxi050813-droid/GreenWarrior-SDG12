@@ -6,18 +6,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class ProfileViewModel : ViewModel() {//3
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()//5ViewModel 里用 StateFlow 保存
+class ProfileViewModel : ViewModel() {
 
-    // 设置新目标，同时将当前排放重置为新的目标值（从零开始节省）
+    // ==================== 用户资料状态 ====================
+    private val _userProfile = MutableStateFlow(UserProfile())
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+
+    // ==================== 排放日志列表状态 ====================
+    private val _logList = MutableStateFlow<List<EmissionLog>>(emptyList())
+    val logList: StateFlow<List<EmissionLog>> = _logList.asStateFlow()
+
+    // ==================== 用户资料相关方法 ====================
     fun setTargetCO2(target: Int) {
         _userProfile.update {
             it.copy(targetCO2 = target, currentCO2 = target)
         }
     }
 
-    // 完成任务减少当前排放量（即增加节省量）
     fun reduceCO2(amount: Int) {
         _userProfile.update { current ->
             val newCurrent = (current.currentCO2 - amount).coerceAtLeast(0)
@@ -25,33 +30,42 @@ class ProfileViewModel : ViewModel() {//3
         }
     }
 
-    // 一键清零（排放量设为0，节省量达到目标值）
     fun clearCarbon() {
         _userProfile.update { it.copy(currentCO2 = 0) }
     }
 
-    // 更新显示名称
     fun updateDisplayName(newName: String) {
         _userProfile.update { it.copy(displayName = newName) }
     }
 
-    // 直接设置当前排放量（用于编辑页手动修改）
     fun updateCurrentCO2(newValue: Int) {
         _userProfile.update { it.copy(currentCO2 = newValue.coerceIn(0, it.targetCO2)) }
     }
 
-    // 检查目标是否达成（节省量 >= 目标量）
     fun isTargetAchieved(): Boolean {
         val profile = _userProfile.value
         return profile.savedCO2 >= profile.targetCO2
     }
+
     fun resetAll() {
         _userProfile.update {
             it.copy(
                 targetCO2 = 0,
                 currentCO2 = 0,
-                displayName = "Green Warrior" // 可选，同时重置名字
+                displayName = "Green Warrior"
             )
         }
+    }
+
+    // ==================== 排放日志相关方法 ====================
+    fun addEmissionLog(name: String, amount: Int) {
+        val newLog = EmissionLog(
+            id = _logList.value.size + 1,
+            activityName = name,
+            emissionAmount = amount
+        )
+        _logList.update { it + newLog }
+        // 如果希望添加日志时自动增加当前排放量（可选），可以在这里调用：
+        // updateCurrentCO2(_userProfile.value.currentCO2 + amount)
     }
 }
