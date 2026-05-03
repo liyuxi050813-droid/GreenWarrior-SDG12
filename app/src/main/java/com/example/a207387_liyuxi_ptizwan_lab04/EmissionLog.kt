@@ -5,4 +5,5 @@ data class EmissionLog(
     val activityName: String,
     val emissionAmount: Int,   // in kg
     val timestamp: Long = System.currentTimeMillis()
+
 )

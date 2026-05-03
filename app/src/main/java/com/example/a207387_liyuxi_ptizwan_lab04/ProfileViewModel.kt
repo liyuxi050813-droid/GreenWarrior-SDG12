@@ -8,56 +8,58 @@ import kotlinx.coroutines.flow.update
 
 class ProfileViewModel : ViewModel() {
 
-    // ==================== 用户资料状态 ====================
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
-    // ==================== 排放日志列表状态 ====================
+    private val _customTasks = MutableStateFlow<List<CustomTask>>(emptyList())
+    val customTasks: StateFlow<List<CustomTask>> = _customTasks.asStateFlow()
+
     private val _logList = MutableStateFlow<List<EmissionLog>>(emptyList())
     val logList: StateFlow<List<EmissionLog>> = _logList.asStateFlow()
 
-    // ==================== 用户资料相关方法 ====================
+    // 活动历史
+    private val _activityHistory = MutableStateFlow<List<ActivityRecord>>(emptyList())
+    val activityHistory: StateFlow<List<ActivityRecord>> = _activityHistory.asStateFlow()
+
+    // 记录一条活动（内部使用）
+    private fun addActivityRecord(type: String, description: String, co2Change: Int) {
+        val record = ActivityRecord(
+            id = _activityHistory.value.size + 1,
+            type = type,
+            description = description,
+            co2Change = co2Change
+        )
+        _activityHistory.update { it + record }
+    }
+
+    // 设置目标
     fun setTargetCO2(target: Int) {
-        _userProfile.update {
-            it.copy(targetCO2 = target, currentCO2 = target)
-        }
+        _userProfile.update { it.copy(targetCO2 = target) }
     }
 
-    fun reduceCO2(amount: Int) {
+    // 完成预设任务或自定义任务
+    fun reduceCO2(amount: Int, taskName: String = "") {
         _userProfile.update { current ->
-            val newCurrent = (current.currentCO2 - amount).coerceAtLeast(0)
-            current.copy(currentCO2 = newCurrent)
-        }
-    }
-
-    fun clearCarbon() {
-        _userProfile.update { it.copy(currentCO2 = 0) }
-    }
-
-    fun updateDisplayName(newName: String) {
-        _userProfile.update { it.copy(displayName = newName) }
-    }
-
-    fun updateCurrentCO2(newValue: Int) {
-        _userProfile.update { it.copy(currentCO2 = newValue.coerceIn(0, it.targetCO2)) }
-    }
-
-    fun isTargetAchieved(): Boolean {
-        val profile = _userProfile.value
-        return profile.savedCO2 >= profile.targetCO2
-    }
-
-    fun resetAll() {
-        _userProfile.update {
-            it.copy(
-                targetCO2 = 0,
-                currentCO2 = 0,
-                displayName = "Green Warrior"
+            current.copy(
+                totalReduced = current.totalReduced + amount,
+                totalActions = current.totalActions + 1
             )
         }
+        // 记录到活动历史
+        addActivityRecord("Task", taskName, -amount)
     }
 
-    // ==================== 排放日志相关方法 ====================
+    // 添加自定义减排任务
+    fun addCustomTask(name: String, amount: Int) {
+        val newTask = CustomTask(
+            id = _customTasks.value.size + 1,
+            name = name,
+            co2Reduction = amount
+        )
+        _customTasks.update { it + newTask }
+    }
+
+    // 添加排放日志
     fun addEmissionLog(name: String, amount: Int) {
         val newLog = EmissionLog(
             id = _logList.value.size + 1,
@@ -65,7 +67,22 @@ class ProfileViewModel : ViewModel() {
             emissionAmount = amount
         )
         _logList.update { it + newLog }
-        // 如果希望添加日志时自动增加当前排放量（可选），可以在这里调用：
-        // updateCurrentCO2(_userProfile.value.currentCO2 + amount)
+
+        _userProfile.update { profile ->
+            profile.copy(
+                totalEmitted = profile.totalEmitted + amount,
+                totalActions = profile.totalActions + 1
+            )
+        }
+        // 记录到活动历史
+        addActivityRecord("Log", name, amount)
+    }
+
+    fun updateDisplayName(newName: String) {
+        _userProfile.update { it.copy(displayName = newName) }
+    }
+
+    fun isTargetAchieved(): Boolean {
+        return _userProfile.value.totalReduced >= _userProfile.value.targetCO2
     }
 }
