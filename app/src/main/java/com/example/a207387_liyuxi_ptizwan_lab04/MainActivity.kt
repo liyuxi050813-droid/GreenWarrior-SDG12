@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -46,6 +47,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+
 import com.example.a207387_liyuxi_ptizwan_lab04.ui.theme.A207387_LiYuxi_PtIzwan_Lab04Theme
 
 object Routes {
@@ -54,6 +56,7 @@ object Routes {
     const val SET_TARGET = "set_target"
     const val ADD_LOG = "add_log"
     const val REPORT = "report"
+    const val CHALLENGES = "challenges"   // 新增
 }
 
 data class BottomNavItem(
@@ -73,8 +76,8 @@ class MainActivity : ComponentActivity() {
 
                 val bottomNavItems = listOf(
                     BottomNavItem("Home", Icons.Filled.Home, Routes.HOME),
+                    BottomNavItem("Challenges", Icons.Filled.EmojiEvents, Routes.CHALLENGES),  // 新功能
                     BottomNavItem("Report", Icons.Filled.BarChart, Routes.REPORT),
-                    BottomNavItem("Log", Icons.Filled.List, Routes.ADD_LOG),
                     BottomNavItem("Profile", Icons.Filled.Person, Routes.EDIT_PROFILE)
                 )
 
@@ -122,6 +125,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Routes.SET_TARGET) {
                             SetTargetScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.CHALLENGES) {
+                            ChallengesScreen(navController = navController, viewModel = viewModel)
                         }
                     }
                 }
@@ -674,5 +680,125 @@ fun AddLogScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) { Text("Save Log") }
+    }
+}
+@Composable
+fun ChallengesScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    // 挑战列表：名称、图标、CO2 减少量、描述
+    data class Challenge(
+        val icon: String,
+        val name: String,
+        val co2Reduction: Int,
+        val description: String
+    )
+
+    val challenges = listOf(
+        Challenge("🥗", "Veggie Day", 3, "Eat only plant‑based meals today."),
+        Challenge("💡", "Lights Off", 2, "Turn off all unnecessary lights for 2 hours."),
+        Challenge("🚲", "Bike Trip", 4, "Use a bike instead of a car for one trip."),
+        Challenge("🛍️", "No Plastic", 1, "Avoid single‑use plastics all day."),
+        Challenge("🌳", "Plant a Tree", 5, "Plant or donate a tree (manual action)."),
+    )
+
+    // 已完成状态，用 mutableStateMapOf 跟踪哪些挑战已完成
+    val completedChallenges = remember { mutableStateMapOf<String, Boolean>() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        Text(
+            text = "Weekly Challenges",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Complete challenges to earn carbon reduction!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        challenges.forEach { challenge ->
+            val isCompleted = completedChallenges[challenge.name] ?: false
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isCompleted)
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 图标 + 文字区域
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(challenge.icon, fontSize = 28.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    challenge.name,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    "Reduce ${challenge.co2Reduction} kg CO₂",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            challenge.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // 完成按钮
+                    Button(
+                        onClick = {
+                            if (!isCompleted) {
+                                viewModel.reduceCO2(challenge.co2Reduction, challenge.name)
+                                completedChallenges[challenge.name] = true
+                            }
+                        },
+                        enabled = !isCompleted,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isCompleted)
+                                MaterialTheme.colorScheme.outline
+                            else
+                                MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(if (isCompleted) "✓ Done" else "Do it!")
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        OutlinedButton(
+            onClick = { completedChallenges.clear() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Reset Challenges (for demo)")
+        }
     }
 }
