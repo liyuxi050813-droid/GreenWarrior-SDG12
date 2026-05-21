@@ -19,12 +19,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -47,6 +49,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 import com.example.a207387_liyuxi_ptizwan_lab04.ui.theme.A207387_LiYuxi_PtIzwan_Lab04Theme
 
@@ -273,14 +278,15 @@ fun HomeScreen(
                     } else 0f
 
                     LinearProgressIndicator(
-                        progress = progress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(8.dp),
-                        color = if (isAchieved) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    progress = { progress },
+                    modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp)
+                                                .height(8.dp),
+                    color = if (isAchieved) MaterialTheme.colorScheme.tertiary
+                                            else MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("${(progress * 100).toInt()}% to goal")
@@ -306,8 +312,47 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     customTasks.forEach { task ->
-                        TaskRow("🌟", task.name, "Reduce ${task.co2Reduction} kg CO₂") {
-                            viewModel.reduceCO2(task.co2Reduction, task.name)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🌟", fontSize = 20.sp)
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(task.name, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Reduce ${task.co2Reduction} kg CO₂",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    viewModel.deleteCustomTask(task)
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "Delete task",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -426,8 +471,11 @@ fun ReportScreen(
                 Text("Net Carbon Saved: ${userProfile.savedCO2} kg")
                 Text("Target: ${userProfile.targetCO2} kg")
                 LinearProgressIndicator(
-                    progress = progress,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                 )
                 Text("${(progress * 100).toInt()}% to goal")
             }
@@ -449,6 +497,64 @@ fun ReportScreen(
                     ) {
                         Text("$name ×$count", modifier = Modifier.weight(1f))
                         Text("$total kg", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+
+        // === Recent Activities (with delete) ===
+        if (activityHistory.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Text("Recent Activities", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val dateFormat = remember { SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()) }
+
+            activityHistory.forEach { record ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 图标：减排🟢 / 排放🔴
+                        Text(
+                            if (record.co2Change < 0) "🟢" else "🔴",
+                            fontSize = 20.sp
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                record.description.ifBlank { "Activity" },
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                "${dateFormat.format(Date(record.timestamp))}  ·  ${if (record.co2Change < 0) "-" else "+"}${Math.abs(record.co2Change)} kg CO₂",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (record.co2Change < 0)
+                                    Color(0xFF2E7D32)  // green
+                                else
+                                    Color(0xFFC62828)  // red
+                            )
+                        }
+                        // 删除按钮
+                        IconButton(onClick = {
+                            viewModel.deleteActivity(record)
+                        }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Delete record",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
