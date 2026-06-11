@@ -74,10 +74,10 @@ object Routes {
     const val ADD_LOG = "add_log"
     const val REPORT = "report"
     const val CHALLENGES = "challenges"
-    const val WEATHER = "weather"       // 天气 Screen
-    const val STATISTICS = "statistics"  // 统计图表 Screen
-    const val EMISSION_LOG = "emission_log" // 排放记录管理 Screen
-    const val COMMUNITY = "community"    // Firestore 社区云端记录 Screen
+    const val WEATHER = "weather"       // Weather Screen
+    const val STATISTICS = "statistics"  // Statistics chart Screen
+    const val EMISSION_LOG = "emission_log" // Emission log management Screen
+    const val COMMUNITY = "community"    // Firestore community cloud records Screen
 }
 
 data class BottomNavItem(
@@ -401,13 +401,13 @@ fun HomeScreen(
                 Text("Add Your Own Task")
             }
 
-            // ===== 新 Screen 入口卡片 =====
+            // ===== New Screen entry cards =====
             Spacer(modifier = Modifier.height(16.dp))
             Text("More Features", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Statistics 入口
+                // Statistics entry
                 Card(
                     modifier = Modifier.weight(1f).clickable { navController.navigate(Routes.STATISTICS) },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
@@ -420,7 +420,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Emission Log 入口
+                // Emission Log entry
                 Card(
                     modifier = Modifier.weight(1f).clickable { navController.navigate(Routes.EMISSION_LOG) },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
@@ -434,7 +434,7 @@ fun HomeScreen(
                 }
             }
 
-            // Community 入口（第二行单独卡片）
+            // Community entry (standalone second-row card)
             Spacer(modifier = Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { navController.navigate(Routes.COMMUNITY) },
@@ -461,7 +461,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(100.dp))
         }
 
-        // 美化弹窗
+        // Styled dialog
         if (showAddTaskDialog) {
             var taskName by remember { mutableStateOf("") }
             var reductionAmount by remember { mutableStateOf("") }
@@ -528,7 +528,7 @@ fun ReportScreen(
         userProfile.savedCO2.toFloat() / userProfile.targetCO2
     } else 0f
 
-    // 明确类型：List<Triple<String, Int, Int>>
+    // Explicit type: List<Triple<String, Int, Int>>
     val taskStats: List<Triple<String, Int, Int>> = remember(activityHistory) {
         activityHistory
             .filter { it.type == "Task" }
@@ -575,7 +575,7 @@ fun ReportScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("Activity Breakdown", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            // 显式指定参数类型，避免 componentN 歧义
+            // Explicit param types to avoid componentN ambiguity
             taskStats.forEach { (name: String, count: Int, total: Int) ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -614,7 +614,7 @@ fun ReportScreen(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 图标：减排🟢 / 排放🔴
+                        // Icon: reduction(green) / emission(red)
                         Text(
                             if (record.co2Change < 0) "🟢" else "🔴",
                             fontSize = 20.sp
@@ -635,7 +635,7 @@ fun ReportScreen(
                                     Color(0xFFC62828)  // red
                             )
                         }
-                        // 删除按钮
+                        // Delete button
                         IconButton(onClick = {
                             viewModel.deleteActivity(record)
                         }) {
@@ -883,7 +883,7 @@ fun ChallengesScreen(
     navController: NavController,
     viewModel: ProfileViewModel
 ) {
-    // 挑战列表：名称、图标、CO2 减少量、描述
+    // Challenge list: name, icon, CO2 reduction, description
     data class Challenge(
         val icon: String,
         val name: String,
@@ -899,7 +899,7 @@ fun ChallengesScreen(
         Challenge("🌳", "Plant a Tree", 5, "Plant or donate a tree (manual action)."),
     )
 
-    // 已完成状态，用 mutableStateMapOf 跟踪哪些挑战已完成
+    // Track completed challenges with mutableStateMapOf
     val completedChallenges = remember { mutableStateMapOf<String, Boolean>() }
 
     Column(
@@ -941,7 +941,7 @@ fun ChallengesScreen(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 图标 + 文字区域
+                    // Icon + text area
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(challenge.icon, fontSize = 28.sp)
@@ -967,7 +967,7 @@ fun ChallengesScreen(
                         )
                     }
 
-                    // 完成按钮
+                    // Complete button
                     Button(
                         onClick = {
                             if (!isCompleted) {
@@ -1015,7 +1015,7 @@ fun WeatherScreen(
 
     val context = LocalContext.current
 
-    // 定位权限 launcher
+    // Location permission launcher
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -1027,7 +1027,7 @@ fun WeatherScreen(
         }
     }
 
-    // 进入页面时启动步数传感器 + 尝试加载天气
+    // Start step sensor + try loading weather on page enter
     LaunchedEffect(Unit) {
         viewModel.startStepSensor()
         if (weatherData == null) {
@@ -1035,7 +1035,7 @@ fun WeatherScreen(
         }
     }
 
-    // 离开页面时停止传感器
+    // Stop sensor on page leave
     DisposableEffect(Unit) {
         onDispose {
             viewModel.stopStepSensor()
@@ -1049,7 +1049,7 @@ fun WeatherScreen(
             .padding(24.dp)
             .statusBarsPadding()
     ) {
-        // 标题行
+        // Title row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1108,7 +1108,7 @@ fun WeatherScreen(
         }
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 加载中
+        // Loading
         if (isLoading && weatherData == null) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(200.dp),
@@ -1122,7 +1122,7 @@ fun WeatherScreen(
             }
         }
 
-        // 错误提示
+        // Error message
         if (errorMessage != null && weatherData == null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -1138,9 +1138,9 @@ fun WeatherScreen(
             }
         }
 
-        // 天气数据展示
+        // Weather data display
         weatherData?.let { weather ->
-            // 当前天气卡片
+            // Current weather card
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
@@ -1187,7 +1187,7 @@ fun WeatherScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ===== 步数传感器卡片 =====
+            // ===== Step Sensor Card =====
             if (isSensorAvailable) {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -1241,7 +1241,7 @@ fun WeatherScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 碳减排建议
+            // Carbon reduction tips
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -1274,7 +1274,7 @@ fun WeatherScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 每日预报（简化版）
+            // Daily forecast (simplified)
             val gson = Gson()
             val dates = try {
                 gson.fromJson(weather.dailyDates, Array<String>::class.java).toList()
@@ -1305,7 +1305,7 @@ fun WeatherScreen(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 日期
+                            // Date
                             val displayDate = try {
                                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                                 val parsed = sdf.parse(date)
@@ -1314,14 +1314,14 @@ fun WeatherScreen(
 
                             Text(displayDate, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
 
-                            // 天气图标
+                            // Weather icon
                             Text(
                                 WeatherCode.toEmoji(dailyCodes.getOrElse(index) { 0 }),
                                 fontSize = 24.sp
                             )
                             Spacer(modifier = Modifier.width(12.dp))
 
-                            // 温度范围
+                            // Temperature range
                             val maxT = maxTemps.getOrElse(index) { 0.0 }.toInt()
                             val minT = minTemps.getOrElse(index) { 0.0 }.toInt()
                             Text(
@@ -1348,7 +1348,7 @@ fun StatisticsScreen(
     val activityHistory by viewModel.activityHistory.collectAsState()
     val dateFormat = remember { java.text.SimpleDateFormat("MM/dd", java.util.Locale.getDefault()) }
 
-    // 按最近 7 天聚合数据
+    // Aggregate data by last 7 days
     val dailyStats = remember(activityHistory) {
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
         val calendar = java.util.Calendar.getInstance()
@@ -1387,7 +1387,7 @@ fun StatisticsScreen(
             .padding(24.dp)
             .statusBarsPadding()
     ) {
-        // 顶部标题行
+        // Top title row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1407,7 +1407,7 @@ fun StatisticsScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== 图例 =====
+        // ===== Legend =====
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall))
@@ -1423,7 +1423,7 @@ fun StatisticsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ===== 柱状图 =====
+        // ===== Bar Chart =====
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -1442,13 +1442,13 @@ fun StatisticsScreen(
                         verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // 减排柱（绿色，向上）
+                        // Reduction bar (green, upward)
                         val reducedHeight = (stat.reduced.toFloat() / maxValue * 140).toInt().coerceAtLeast(0)
-                        // 排放柱（红色，向上）
+                        // Emission bar (red, upward)
                         val emittedHeight = (stat.emitted.toFloat() / maxValue * 140).toInt().coerceAtLeast(0)
 
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            // 减排
+                            // Reduction
                             if (stat.reduced > 0) {
                                 Box(
                                     modifier = Modifier
@@ -1459,7 +1459,7 @@ fun StatisticsScreen(
                             } else {
                                 Spacer(modifier = Modifier.width(18.dp))
                             }
-                            // 排放
+                            // Emission
                             if (stat.emitted > 0) {
                                 Box(
                                     modifier = Modifier
@@ -1474,7 +1474,7 @@ fun StatisticsScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // 日期标签
+                        // Date label
                         val label = try {
                             val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(stat.date)
                             if (parsed != null) dateFormat.format(parsed) else stat.date
@@ -1487,7 +1487,7 @@ fun StatisticsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ===== 每周汇总卡片 =====
+        // ===== Weekly Summary Card =====
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("Weekly Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -1525,7 +1525,7 @@ fun EmissionLogScreen(
     val activityHistory by viewModel.activityHistory.collectAsState()
     val context = LocalContext.current
 
-    // 只显示 type == "Log" 的排放记录
+    // Only show records where type == "Log"
     val emissionRecords = remember(activityHistory) {
         activityHistory.filter { it.type == "Log" }
     }
@@ -1539,7 +1539,7 @@ fun EmissionLogScreen(
             .padding(24.dp)
             .statusBarsPadding()
     ) {
-        // 标题行
+        // Title row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1560,7 +1560,7 @@ fun EmissionLogScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         if (emissionRecords.isEmpty()) {
-            // 空状态
+            // Empty state
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -1572,7 +1572,7 @@ fun EmissionLogScreen(
                 Text("Tap + to add your first emission log", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            // 记录列表
+            // Record list
             emissionRecords.forEach { record ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -1594,7 +1594,7 @@ fun EmissionLogScreen(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // 排放量（红色）
+                            // Emission amount (red)
                             Text(
                                 "+${record.co2Change} kg",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -1602,7 +1602,7 @@ fun EmissionLogScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            // 删除按钮
+                            // Delete button
                             IconButton(
                                 onClick = { viewModel.deleteActivity(record) },
                                 modifier = Modifier.size(36.dp)
@@ -1623,7 +1623,7 @@ fun EmissionLogScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 底部汇总
+            // Bottom summary
             val totalEmission = emissionRecords.sumOf { it.co2Change }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Total Emissions", style = MaterialTheme.typography.titleSmall)

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppDao {
-    // 活动记录
+    // Activity records
     @Insert
     suspend fun insertActivity(record: ActivityRecordEntity)
 
@@ -19,7 +19,7 @@ interface AppDao {
     @Delete
     suspend fun deleteActivity(record: ActivityRecordEntity)
 
-    // 自定义任务
+    // Custom tasks
     @Insert
     suspend fun insertCustomTask(task: CustomTaskEntity)
 
@@ -29,14 +29,14 @@ interface AppDao {
     @Delete
     suspend fun deleteCustomTask(task: CustomTaskEntity)
 
-    // 用户设置（永远只有一行，id=1）
+    // User settings (always single row, id=1)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveProfileSettings(settings: ProfileSettingsEntity)
 
     @Query("SELECT * FROM profile_settings WHERE id = 1")
     suspend fun getProfileSettings(): ProfileSettingsEntity?
 
-    // ===== 天气缓存 (Weather API) =====
+    // ===== Weather cache (Weather API) =====
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveWeather(weather: WeatherEntity)
 

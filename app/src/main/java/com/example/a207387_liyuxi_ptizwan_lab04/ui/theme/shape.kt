@@ -5,17 +5,17 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 val Shapes = Shapes(
-    // 1. 头像和任务图标想变圆，这个数值要大
+    // 1. For round avatars and task icons, use a large value
     extraSmall = RoundedCornerShape(50.dp),
 
-    // 2. 输入框和按钮的圆角
+    // 2. Input fields and button corner radius
     medium = RoundedCornerShape(12.dp),
 
-    // 3. 任务卡片的圆角
+    // 3. Task card corner radius
     large = RoundedCornerShape(20.dp),
 
-    // 4. 【关键】Dashboard 和数据圆环
-    // 要想变回完美的圆，这个数值必须很大（比如 100.dp）
-    // 或者设置为 RoundedCornerShape(28.dp) 恢复你最初的效果
+    // 4. [KEY] Dashboard and data rings
+    // To make a perfect circle, this value must be large (e.g. 100.dp)
+    // Or set RoundedCornerShape(28.dp) to restore your original effect
     extraLarge = RoundedCornerShape(100.dp)
 )

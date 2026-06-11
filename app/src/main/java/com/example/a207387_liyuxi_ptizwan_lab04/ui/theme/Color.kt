@@ -2,15 +2,15 @@ package com.example.a207387_liyuxi_ptizwan_lab04.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- 亮色模式 (更清新、更干净) ---
-val primaryLight = Color(0xFF006D3E) // 深森林绿，更有力量感
+// --- Light mode (fresher, cleaner) ---
+val primaryLight = Color(0xFF006D3E) // Deep forest green, more impactful
 val onPrimaryLight = Color(0xFFFFFFFF)
-val primaryContainerLight = Color(0xFF99F6B4) // 明亮的薄荷绿容器
+val primaryContainerLight = Color(0xFF99F6B4) // Bright mint green container
 val onPrimaryContainerLight = Color(0xFF00210F)
 
 val secondaryLight = Color(0xFF4F6354)
 val onSecondaryLight = Color(0xFFD90000)
-val secondaryContainerLight = Color(0xFFD2E8D5) // 浅灰绿，用于次要卡片
+val secondaryContainerLight = Color(0xFFD2E8D5) // Light gray-green, used for secondary cards
 val onSecondaryContainerLight = Color(0xFF0C1F13)
 
 val tertiaryLight = Color(0xFF3B6470)
@@ -23,7 +23,7 @@ val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF410002)
 
-val backgroundLight = Color(0xFFF7FBF6) // 几乎是纯白，但带一点点点绿，极简干净
+val backgroundLight = Color(0xFFF7FBF6) // Almost pure white, subtle green tint, minimalist and clean
 val onBackgroundLight = Color(0xFF191D1A)
 val surfaceLight = Color(0xFFF7FBF6)
 val onSurfaceLight = Color(0xFF191D1A)
@@ -43,8 +43,8 @@ val surfaceContainerLight = Color(0xFFEBF0EA)
 val surfaceContainerHighLight = Color(0xFFE5EAE5)
 val surfaceContainerHighestLight = Color(0xFFE0E5DF)
 
-// --- 暗色模式 (深邃、高级) ---
-val primaryDark = Color(0xFF7DD99A) // 柔和的亮绿
+// --- Dark mode (deep, premium) ---
+val primaryDark = Color(0xFF7DD99A) // Soft bright green
 val onPrimaryDark = Color(0xFF00391E)
 val primaryContainerDark = Color(0xFF00522D)
 val onPrimaryContainerDark = Color(0xFF99F6B4)

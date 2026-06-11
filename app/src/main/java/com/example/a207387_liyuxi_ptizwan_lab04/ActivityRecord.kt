@@ -4,8 +4,8 @@ import java.util.Date
 
 data class ActivityRecord(
     val id: Int,
-    val type: String,          // "Task" 或 "Log"
+    val type: String,          // "Task" or "Log"
     val description: String,   // e.g. "Cycle to Work" or "Drove to office"
-    val co2Change: Int,        // 负数表示减排，正数表示排放
+    val co2Change: Int,        // Negative = reduction, positive = emission
     val timestamp: Long = System.currentTimeMillis()
 )

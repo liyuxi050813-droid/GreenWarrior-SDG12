@@ -6,5 +6,5 @@ data class UserProfile(
     val totalEmitted: Int = 0,
     val totalActions: Int = 0,
     val targetCO2: Int = 100,
-    val savedCO2: Int = 0  // 如果你之前用到，现在可以忽略或从 totalReduced 计算
+    val savedCO2: Int = 0  // If previously used, can ignore now or calculate from totalReduced
 )

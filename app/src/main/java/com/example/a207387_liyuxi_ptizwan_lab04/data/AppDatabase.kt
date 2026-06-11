@@ -24,7 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // 数据库版本 1 → 2 迁移：新增 profile_settings 表
+        // DB version 1 → 2 migration: add profile_settings table
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -37,7 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // 数据库版本 2 → 3 迁移：新增 weather_cache 表
+        // DB version 2 → 3 migration: add weather_cache table
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""

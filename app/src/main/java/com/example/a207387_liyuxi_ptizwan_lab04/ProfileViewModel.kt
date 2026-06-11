@@ -23,11 +23,11 @@ import kotlinx.coroutines.launch
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 1. 创建数据库和仓库实例
+    // 1. Create database and repository instances
     private val dao = AppDatabase.getInstance(application).appDao()
     private val repository = AppRepository(dao)
 
-    // 2. 从数据库读取活动记录（用 Flow 转 StateFlow）
+    // 2. Read activity records from database (Flow → StateFlow)
     private val _activityHistory: StateFlow<List<ActivityRecordEntity>> =
         repository.getAllActivities()
             .stateIn(
@@ -37,7 +37,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             )
     val activityHistory: StateFlow<List<ActivityRecordEntity>> = _activityHistory
 
-    // 3. 从数据库读取自定义任务
+    // 3. Read custom tasks from database
     private val _customTasks: StateFlow<List<CustomTaskEntity>> =
         repository.getAllCustomTasks()
             .stateIn(
@@ -47,8 +47,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             )
     val customTasks: StateFlow<List<CustomTaskEntity>> = _customTasks
 
-    // 4. 排放日志（从 activityHistory 中过滤 type == "Log" 的记录）
-    //    如果需要保留原来的 EmissionLog 数据类，可以在这里做映射
+    // 4. Emission logs (filter type == "Log" records from activityHistory)
+    //    If you need to keep the original EmissionLog data class, mapping can be done here
     val logList: StateFlow<List<EmissionLog>> = _activityHistory
         .map { records ->
             records
@@ -67,11 +67,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
-    // 5. 用户汇总数据（内存中维护，启动时从数据库重新计算）
+    // 5. User summary data (maintained in memory, recalculated from DB on init)
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
-    // ===== 天气数据 =====
+    // ===== Weather data =====
     private val _weatherData = MutableStateFlow<WeatherEntity?>(null)
     val weatherData: StateFlow<WeatherEntity?> = _weatherData.asStateFlow()
 
@@ -81,16 +81,16 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _weatherError = MutableStateFlow<String?>(null)
     val weatherError: StateFlow<String?> = _weatherError.asStateFlow()
 
-    // ===== 定位服务 =====
+    // ===== Location service =====
     private val locationService = LocationService(application)
 
-    private val _currentLatitude = MutableStateFlow(2.93)   // 默认 UKM
+    private val _currentLatitude = MutableStateFlow(2.93)   // Default UKM
     private val _currentLongitude = MutableStateFlow(101.78)
 
     private val _locationText = MutableStateFlow("Bangi, Selangor (UKM Campus)")
     val locationText: StateFlow<String> = _locationText.asStateFlow()
 
-    // ===== 步数传感器 =====
+    // ===== Step sensor =====
     private val stepSensorService = StepSensorService(application)
 
     private val _stepCount = MutableStateFlow(0)
@@ -117,15 +117,15 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _syncError = MutableStateFlow<String?>(null)
     val syncError: StateFlow<String?> = _syncError.asStateFlow()
 
-    // 初始化时从数据库恢复所有数据
+    // Restore all data from database on init
     init {
         viewModelScope.launch {
-            // ① 恢复用户设置（displayName、targetCO2）
+            // 1) Restore user settings (displayName, targetCO2)
             val savedSettings = repository.getProfileSettings()
             val displayName = savedSettings?.displayName ?: "Green Warrior"
             val targetCO2 = savedSettings?.targetCO2 ?: 100
 
-            // ② 恢复活动汇总
+            // 2) Restore activity summary
             val allRecords = repository.getAllActivities().first()
             val reduced = allRecords.filter { it.co2Change < 0 }.sumOf { -it.co2Change }
             val emitted = allRecords.filter { it.co2Change > 0 }.sumOf { it.co2Change }
@@ -141,16 +141,16 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
 
-            // ③ 从 Room 加载缓存的天气数据
+            // 3) Load cached weather data from Room
             val cachedWeather = repository.getWeatherOnce()
             _weatherData.value = cachedWeather
         }
     }
 
-    // 6. 完成减排任务（预设/自定义）+ 自动同步到 Firestore
+    // 6. Complete reduction task (preset/custom) + auto sync to Firestore
     fun reduceCO2(amount: Int, taskName: String = "") {
         viewModelScope.launch {
-            // 插入本地数据库
+            // Insert into local database
             repository.insertActivity(
                 ActivityRecordEntity(
                     type = "Task",
@@ -158,7 +158,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     co2Change = -amount
                 )
             )
-            // 更新内存汇总
+            // Update in-memory summary
             _userProfile.update {
                 it.copy(
                     totalReduced = it.totalReduced + amount,
@@ -166,14 +166,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     savedCO2 = it.savedCO2 + amount
                 )
             }
-            // 同步到 Firestore 云端社区
+            // Sync to Firestore cloud community
             if (taskName.isNotBlank()) {
                 syncTaskToCloud(taskName, amount)
             }
         }
     }
 
-    // 7. 添加自定义任务
+    // 7. Add custom task
     fun addCustomTask(name: String, amount: Int) {
         viewModelScope.launch {
             repository.insertCustomTask(
@@ -182,7 +182,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // 8. 添加排放日志
+    // 8. Add emission log
     fun addEmissionLog(name: String, amount: Int) {
         viewModelScope.launch {
             repository.insertActivity(
@@ -196,27 +196,27 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 it.copy(
                     totalEmitted = it.totalEmitted + amount,
                     totalActions = it.totalActions + 1,
-                    savedCO2 = it.savedCO2 - amount   // ✅ 排放增加，净减碳量减少
+                    savedCO2 = it.savedCO2 - amount   // Emission increase, net carbon reduction decreases
                 )
             }
         }
     }
 
-    // 12. 删除活动记录
+    // 12. Delete activity record
     fun deleteActivity(record: ActivityRecordEntity) {
         viewModelScope.launch {
             repository.deleteActivity(record)
-            // 更新内存统计
+            // Update in-memory stats
             _userProfile.update {
                 if (record.co2Change < 0) {
-                    // 删除的是减排记录
+                    // Deleted a reduction record
                     it.copy(
                         totalReduced = it.totalReduced - (-record.co2Change),
                         totalActions = (it.totalActions - 1).coerceAtLeast(0),
                         savedCO2 = it.savedCO2 - (-record.co2Change)
                     )
                 } else {
-                    // 删除的是排放记录
+                    // Deleted an emission record
                     it.copy(
                         totalEmitted = it.totalEmitted - record.co2Change,
                         totalActions = (it.totalActions - 1).coerceAtLeast(0),
@@ -227,26 +227,26 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // 13. 删除自定义任务
+    // 13. Delete custom task
     fun deleteCustomTask(task: CustomTaskEntity) {
         viewModelScope.launch {
             repository.deleteCustomTask(task)
         }
     }
 
-    // 9. 设置减排目标（同时存数据库）
+    // 9. Set reduction target (also save to DB)
     fun setTargetCO2(target: Int) {
         _userProfile.update { it.copy(targetCO2 = target) }
         saveSettingsToDb()
     }
 
-    // 10. 修改显示名称（同时存数据库）
+    // 10. Change display name (also save to DB)
     fun updateDisplayName(newName: String) {
         _userProfile.update { it.copy(displayName = newName) }
         saveSettingsToDb()
     }
 
-    // 11. 将当前设置写入数据库
+    // 11. Write current settings to database
     private fun saveSettingsToDb() {
         val profile = _userProfile.value
         viewModelScope.launch {
@@ -264,10 +264,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         return _userProfile.value.totalReduced >= _userProfile.value.targetCO2
     }
 
-    // ===================== 天气 API =====================
+    // ===================== Weather API =====================
 
     /**
-     * 调用 Open-Meteo API 获取天气 + 生成碳减排建议
+     * Call Open-Meteo API for weather + generate carbon reduction tips
      */
     fun fetchWeatherData(latitude: Double = 2.93, longitude: Double = 101.78) {
         viewModelScope.launch {
@@ -281,7 +281,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 val current = response.currentWeather
                 val daily = response.daily
 
-                // 生成碳减排建议
+                // Generate carbon reduction tips
                 val tip = generateCarbonTip(
                     temp = current.temperature,
                     weatherCode = current.weatherCode,
@@ -304,13 +304,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     lastUpdated = System.currentTimeMillis()
                 )
 
-                // 存入 Room 缓存
+                // Save to Room cache
                 repository.saveWeather(weatherEntity)
                 _weatherData.value = weatherEntity
 
             } catch (e: Exception) {
                 _weatherError.value = "Failed to load weather: ${e.message}"
-                // 加载失败时，使用缓存数据
+                // On load failure, use cached data
                 if (_weatherData.value == null) {
                     _weatherData.value = repository.getWeatherOnce()
                 }
@@ -321,7 +321,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * 基于天气数据生成个性化碳减排建议
+     * Generate personalized carbon reduction tips based on weather
      */
     private fun generateCarbonTip(temp: Double, weatherCode: Int, windSpeed: Double): String {
         val tips = when {
@@ -353,16 +353,16 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         return tips[(System.currentTimeMillis() % tips.size).toInt()]
     }
 
-    // ===================== 定位 + 动态天气 =====================
+    // ===================== Location + dynamic weather =====================
 
     /**
-     * 获取当前设备位置，成功后自动调用 fetchWeatherData
-     * 需要调用方先确保权限已授予
+     * Get current device location, auto call fetchWeatherData on success
+     * Caller must ensure permission is granted first
      */
     fun fetchWeatherWithLocation() {
         if (!locationService.hasLocationPermission()) {
             _weatherError.value = "Location permission not granted"
-            // 降级：使用默认坐标
+            // Fallback: use default coordinates
             fetchWeatherData()
             return
         }
@@ -375,26 +375,26 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _currentLatitude.value = lat
                 _currentLongitude.value = lon
                 _locationText.value = String.format("%.4f, %.4f", lat, lon)
-                // 拿到位置后获取天气
+                // Fetch weather after getting location
                 fetchWeatherData(lat, lon)
             },
             onFailure = { error ->
                 _weatherError.value = error
-                // 失败降级到默认坐标
+                // Fallback to default coordinates on failure
                 fetchWeatherData()
             }
         )
     }
 
     /**
-     * 检查定位权限
+     * Check location permission
      */
     fun hasLocationPermission(): Boolean = locationService.hasLocationPermission()
 
-    // ===================== 步数传感器 =====================
+    // ===================== Step sensor =====================
 
     /**
-     * 开始监听步数
+     * Start step monitoring
      */
     fun startStepSensor() {
         _isSensorAvailable.value = stepSensorService.isAvailable()
@@ -407,14 +407,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * 停止监听步数（Activity 暂停时调用）
+     * Stop step monitoring (call on Activity pause)
      */
     fun stopStepSensor() {
         stepSensorService.stopListening()
     }
 
     /**
-     * 重置步数计数
+     * Reset step count
      */
     fun resetStepCounter() {
         stepSensorService.reset()
@@ -470,11 +470,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ===================== 统计数据 =====================
+    // ===================== Statistics data =====================
 
     /**
-     * 返回最近 7 天每天的碳减排/排放统计数据
-     * 用于 StatisticsScreen 柱状图
+     * Return daily carbon reduction/emission stats for last 7 days
+     * Used for StatisticsScreen bar chart
      */
     fun getDailyCarbonStats(): Flow<List<DailyCarbonStat>> {
         return _activityHistory.map { records ->
@@ -509,7 +509,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
 data class DailyCarbonStat(
     val date: String,       // "2026-06-11"
-    val reduced: Int,       // 当天减排量（正）
-    val emitted: Int,       // 当天排放量（正）
-    val net: Int            // 净减排 = reduced - emitted
+    val reduced: Int,       // Daily reduction (positive)
+    val emitted: Int,       // Daily emission (positive)
+    val net: Int            // Net reduction = reduced - emitted
 )

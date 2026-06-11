@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.a207387_liyuxi_ptizwan_lab04"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.a207387_liyuxi_ptizwan_lab04"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -82,6 +82,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.14.1"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
+
+    // Coroutines support for Firebase await() on Tasks
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 }
 
 apply(plugin = "com.google.gms.google-services")
