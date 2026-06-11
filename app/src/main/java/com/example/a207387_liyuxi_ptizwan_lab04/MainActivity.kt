@@ -1,9 +1,13 @@
 package com.example.a207387_liyuxi_ptizwan_lab04
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -19,11 +23,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -52,7 +62,9 @@ import androidx.navigation.compose.rememberNavController
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import com.google.gson.Gson
+import com.example.a207387_liyuxi_ptizwan_lab04.data.WeatherEntity
+import com.example.a207387_liyuxi_ptizwan_lab04.network.WeatherCode
 import com.example.a207387_liyuxi_ptizwan_lab04.ui.theme.A207387_LiYuxi_PtIzwan_Lab04Theme
 
 object Routes {
@@ -61,7 +73,11 @@ object Routes {
     const val SET_TARGET = "set_target"
     const val ADD_LOG = "add_log"
     const val REPORT = "report"
-    const val CHALLENGES = "challenges"   // 新增
+    const val CHALLENGES = "challenges"
+    const val WEATHER = "weather"       // 天气 Screen
+    const val STATISTICS = "statistics"  // 统计图表 Screen
+    const val EMISSION_LOG = "emission_log" // 排放记录管理 Screen
+    const val COMMUNITY = "community"    // Firestore 社区云端记录 Screen
 }
 
 data class BottomNavItem(
@@ -81,7 +97,8 @@ class MainActivity : ComponentActivity() {
 
                 val bottomNavItems = listOf(
                     BottomNavItem("Home", Icons.Filled.Home, Routes.HOME),
-                    BottomNavItem("Challenges", Icons.Filled.EmojiEvents, Routes.CHALLENGES),  // 新功能
+                    BottomNavItem("Weather", Icons.Filled.Cloud, Routes.WEATHER),
+                    BottomNavItem("Challenges", Icons.Filled.EmojiEvents, Routes.CHALLENGES),
                     BottomNavItem("Report", Icons.Filled.BarChart, Routes.REPORT),
                     BottomNavItem("Profile", Icons.Filled.Person, Routes.EDIT_PROFILE)
                 )
@@ -133,6 +150,18 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Routes.CHALLENGES) {
                             ChallengesScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.WEATHER) {
+                            WeatherScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.STATISTICS) {
+                            StatisticsScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.EMISSION_LOG) {
+                            EmissionLogScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(Routes.COMMUNITY) {
+                            CommunityScreen(navController = navController, viewModel = viewModel)
                         }
                     }
                 }
@@ -370,6 +399,63 @@ fun HomeScreen(
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Add Your Own Task")
+            }
+
+            // ===== 新 Screen 入口卡片 =====
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("More Features", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Statistics 入口
+                Card(
+                    modifier = Modifier.weight(1f).clickable { navController.navigate(Routes.STATISTICS) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("\uD83D\uDCCA", style = MaterialTheme.typography.headlineMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Statistics", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text("View trends", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+
+                // Emission Log 入口
+                Card(
+                    modifier = Modifier.weight(1f).clickable { navController.navigate(Routes.EMISSION_LOG) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("\uD83D\uDCDD", style = MaterialTheme.typography.headlineMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Emission Log", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text("Manage logs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+            }
+
+            // Community 入口（第二行单独卡片）
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { navController.navigate(Routes.COMMUNITY) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("\uD83C\uDF0D", style = MaterialTheme.typography.headlineMedium)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Community Impact", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text("See what others are doing to reduce carbon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                    Icon(
+                        Icons.Filled.EmojiEvents,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(100.dp))
@@ -910,5 +996,824 @@ fun ChallengesScreen(
         ) {
             Text("Reset Challenges (for demo)")
         }
+    }
+}
+
+// ===================== WeatherScreen =====================
+@Composable
+fun WeatherScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    val weatherData by viewModel.weatherData.collectAsState()
+    val isLoading by viewModel.isWeatherLoading.collectAsState()
+    val errorMessage by viewModel.weatherError.collectAsState()
+    val locationText by viewModel.locationText.collectAsState()
+    val stepCount by viewModel.stepCount.collectAsState()
+    val stepCO2Saved by viewModel.stepCO2Saved.collectAsState()
+    val isSensorAvailable by viewModel.isSensorAvailable.collectAsState()
+
+    val context = LocalContext.current
+
+    // 定位权限 launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            viewModel.fetchWeatherWithLocation()
+        } else {
+            viewModel.fetchWeatherData()
+        }
+    }
+
+    // 进入页面时启动步数传感器 + 尝试加载天气
+    LaunchedEffect(Unit) {
+        viewModel.startStepSensor()
+        if (weatherData == null) {
+            viewModel.fetchWeatherWithLocation()
+        }
+    }
+
+    // 离开页面时停止传感器
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopStepSensor()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        // 标题行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Live Weather", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Row {
+                IconButton(onClick = {
+                    val hasCoarse = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val hasFine = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (hasCoarse || hasFine) {
+                        viewModel.fetchWeatherWithLocation()
+                    } else {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            )
+                        )
+                    }
+                }) {
+                    Icon(
+                        Icons.Filled.MyLocation,
+                        contentDescription = "Get location weather",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { viewModel.fetchWeatherWithLocation() }) {
+                    Icon(
+                        Icons.Filled.Refresh,
+                        contentDescription = "Refresh weather",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.LocationOn,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                locationText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 加载中
+        if (isLoading && weatherData == null) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Fetching weather & location...")
+                }
+            }
+        }
+
+        // 错误提示
+        if (errorMessage != null && weatherData == null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("\u26A0\uFE0F $errorMessage", color = MaterialTheme.colorScheme.onErrorContainer)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { viewModel.fetchWeatherWithLocation() }) {
+                        Text("Retry")
+                    }
+                }
+            }
+        }
+
+        // 天气数据展示
+        weatherData?.let { weather ->
+            // 当前天气卡片
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(weather.weatherEmoji, fontSize = 64.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "${weather.temperature.toInt()}°C",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        weather.weatherDescription,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("\uD83D\uDCA8", fontSize = 20.sp)
+                            Text("${weather.windSpeed.toInt()} km/h", style = MaterialTheme.typography.bodySmall)
+                            Text("Wind", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("\uD83D\uDCC5", fontSize = 20.sp)
+                            Text(
+                                SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
+                                    .format(Date(weather.lastUpdated)),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text("Updated", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ===== 步数传感器卡片 =====
+            if (isSensorAvailable) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.DirectionsWalk,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Step Counter", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "$stepCount",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1B5E20)
+                                )
+                                Text("Steps", style = MaterialTheme.typography.labelSmall)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    String.format("%.1f", stepCO2Saved),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1B5E20)
+                                )
+                                Text("kg CO\u2082 Saved", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Walking instead of driving saves ~0.2kg CO\u2082 per km",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF388E3C)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // 碳减排建议
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF3E0)
+                ),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text("\uD83C\uDF31", fontSize = 28.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Carbon-Smart Tip",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE65100)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            weather.carbonTip.ifBlank { "Walk or cycle today to reduce your carbon footprint!" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFBF360C)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 每日预报（简化版）
+            val gson = Gson()
+            val dates = try {
+                gson.fromJson(weather.dailyDates, Array<String>::class.java).toList()
+            } catch (_: Exception) { emptyList<String>() }
+            val maxTemps = try {
+                gson.fromJson(weather.dailyMaxTemp, Array<Double>::class.java).toList()
+            } catch (_: Exception) { emptyList<Double>() }
+            val minTemps = try {
+                gson.fromJson(weather.dailyMinTemp, Array<Double>::class.java).toList()
+            } catch (_: Exception) { emptyList<Double>() }
+            val dailyCodes = try {
+                gson.fromJson(weather.dailyWeatherCodes, Array<Int>::class.java).toList()
+            } catch (_: Exception) { emptyList<Int>() }
+
+            if (dates.isNotEmpty()) {
+                Text("3-Day Forecast", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                dates.forEachIndexed { index, date ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 日期
+                            val displayDate = try {
+                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                val parsed = sdf.parse(date)
+                                SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(parsed!!)
+                            } catch (_: Exception) { date }
+
+                            Text(displayDate, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+
+                            // 天气图标
+                            Text(
+                                WeatherCode.toEmoji(dailyCodes.getOrElse(index) { 0 }),
+                                fontSize = 24.sp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // 温度范围
+                            val maxT = maxTemps.getOrElse(index) { 0.0 }.toInt()
+                            val minT = minTemps.getOrElse(index) { 0.0 }.toInt()
+                            Text(
+                                "$maxT° / $minT°",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+// ===================== StatisticsScreen =====================
+@Composable
+fun StatisticsScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    val activityHistory by viewModel.activityHistory.collectAsState()
+    val dateFormat = remember { java.text.SimpleDateFormat("MM/dd", java.util.Locale.getDefault()) }
+
+    // 按最近 7 天聚合数据
+    val dailyStats = remember(activityHistory) {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val calendar = java.util.Calendar.getInstance()
+        val today = sdf.format(calendar.time)
+
+        val days = mutableListOf<String>()
+        repeat(7) { offset ->
+            calendar.time = sdf.parse(today) ?: java.util.Date()
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, -6 + offset)
+            days.add(sdf.format(calendar.time))
+        }
+
+        days.map { dayStr ->
+            val dayRecords = activityHistory.filter { record ->
+                sdf.format(java.util.Date(record.timestamp)) == dayStr
+            }
+            val reduced = dayRecords.filter { it.co2Change < 0 }.sumOf { -it.co2Change }
+            val emitted = dayRecords.filter { it.co2Change > 0 }.sumOf { it.co2Change }
+            DailyCarbonStat(
+                date = dayStr,
+                reduced = reduced,
+                emitted = emitted,
+                net = reduced - emitted
+            )
+        }
+    }
+
+    val maxValue = remember(dailyStats) {
+        (dailyStats.maxOfOrNull { maxOf(it.reduced, it.emitted) } ?: 1).coerceAtLeast(1)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        // 顶部标题行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Statistics", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { navController.navigateUp() }) {
+                Icon(Icons.Filled.Person, contentDescription = "Back")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Your carbon activity in the last 7 days",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ===== 图例 =====
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Reduced", style = MaterialTheme.typography.bodySmall)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(12.dp).background(MaterialTheme.colorScheme.error, shape = MaterialTheme.shapes.extraSmall))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Emitted", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ===== 柱状图 =====
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                dailyStats.forEach { stat ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // 减排柱（绿色，向上）
+                        val reducedHeight = (stat.reduced.toFloat() / maxValue * 140).toInt().coerceAtLeast(0)
+                        // 排放柱（红色，向上）
+                        val emittedHeight = (stat.emitted.toFloat() / maxValue * 140).toInt().coerceAtLeast(0)
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            // 减排
+                            if (stat.reduced > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(18.dp)
+                                        .height(reducedHeight.dp)
+                                        .background(MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(18.dp))
+                            }
+                            // 排放
+                            if (stat.emitted > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(18.dp)
+                                        .height(emittedHeight.dp)
+                                        .background(MaterialTheme.colorScheme.error, shape = MaterialTheme.shapes.extraSmall)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(18.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // 日期标签
+                        val label = try {
+                            val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(stat.date)
+                            if (parsed != null) dateFormat.format(parsed) else stat.date
+                        } catch (_: Exception) { stat.date }
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ===== 每周汇总卡片 =====
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Weekly Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                val totalReduced = dailyStats.sumOf { it.reduced }
+                val totalEmitted = dailyStats.sumOf { it.emitted }
+                val netSaved = totalReduced - totalEmitted
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                    Text("Total Reduced")
+                    Text("$totalReduced kg", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                    Text("Total Emitted")
+                    Text("$totalEmitted kg", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                    Text("Net Saved", fontWeight = FontWeight.Bold)
+                    Text("$netSaved kg", fontWeight = FontWeight.ExtraBold, color = if (netSaved >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+// ===================== EmissionLogScreen =====================
+@Composable
+fun EmissionLogScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    val activityHistory by viewModel.activityHistory.collectAsState()
+    val context = LocalContext.current
+
+    // 只显示 type == "Log" 的排放记录
+    val emissionRecords = remember(activityHistory) {
+        activityHistory.filter { it.type == "Log" }
+    }
+
+    val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        // 标题行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Emission Log", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { navController.navigate(Routes.ADD_LOG) }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add Emission Log", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Track and delete your carbon emission records",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (emissionRecords.isEmpty()) {
+            // 空状态
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("🗒️", style = MaterialTheme.typography.displayMedium)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("No emission logs yet", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Tap + to add your first emission log", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            // 记录列表
+            emissionRecords.forEach { record ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(record.description, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val dateStr = try {
+                                dateFormat.format(java.util.Date(record.timestamp))
+                            } catch (_: Exception) { "" }
+                            Text(dateStr, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // 排放量（红色）
+                            Text(
+                                "+${record.co2Change} kg",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            // 删除按钮
+                            IconButton(
+                                onClick = { viewModel.deleteActivity(record) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 底部汇总
+            val totalEmission = emissionRecords.sumOf { it.co2Change }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Total Emissions", style = MaterialTheme.typography.titleSmall)
+                Text("$totalEmission kg CO₂", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+// ===================== CommunityScreen (Firestore Cloud Sync) =====================
+@Composable
+fun CommunityScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
+    val communityRecords by viewModel.communityRecords.collectAsState()
+    val communityStats by viewModel.communityStats.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val syncError by viewModel.syncError.collectAsState()
+
+    // Load community data when screen appears
+    LaunchedEffect(Unit) {
+        viewModel.loadCommunityRecords()
+    }
+
+    val dateFormat = remember { SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        // Title row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Community Impact", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { viewModel.loadCommunityRecords() }) {
+                if (isSyncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "See how the community is reducing carbon together",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Community Stats Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${communityStats.totalContributors}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("Contributors", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${communityStats.totalTasks}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("Actions", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${communityStats.totalReduction}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("kg CO2 Saved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Sync error
+        if (syncError != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("\u26A0\uFE0F", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(syncError ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Community Records List
+        if (communityRecords.isEmpty() && !isSyncing) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("\uD83C\uDF0D", style = MaterialTheme.typography.displayMedium)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("No community records yet", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Complete a task to be the first contributor!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            Text("Recent Contributions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            communityRecords.forEach { record ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Avatar circle with first letter
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                record.userId.take(1).uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(record.userId, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            Text(
+                                "Completed: ${record.taskName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (record.location.isNotBlank()) {
+                                Text(
+                                    "\uD83D\uDCCD ${record.location}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "-${record.co2Reduction} kg",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7D32)
+                            )
+                            Text(
+                                dateFormat.format(Date(record.timestamp)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Loading indicator
+        if (isSyncing) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Syncing with cloud...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }

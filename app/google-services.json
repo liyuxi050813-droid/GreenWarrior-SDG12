@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "41162875194",
+    "project_id": "greenwarrior-661a6",
+    "storage_bucket": "greenwarrior-661a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:41162875194:android:9848688d4e1bdf971e3003",
+        "android_client_info": {
+          "package_name": "com.example.a207387_liyuxi_ptizwan_lab04"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgkpw1OVYjfxNL4t1GeJuh2guLkQap4Gg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

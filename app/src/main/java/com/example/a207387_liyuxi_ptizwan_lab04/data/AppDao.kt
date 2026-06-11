@@ -35,4 +35,14 @@ interface AppDao {
 
     @Query("SELECT * FROM profile_settings WHERE id = 1")
     suspend fun getProfileSettings(): ProfileSettingsEntity?
+
+    // ===== 天气缓存 (Weather API) =====
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveWeather(weather: WeatherEntity)
+
+    @Query("SELECT * FROM weather_cache WHERE id = 1")
+    fun getWeatherFlow(): Flow<WeatherEntity?>
+
+    @Query("SELECT * FROM weather_cache WHERE id = 1")
+    suspend fun getWeatherOnce(): WeatherEntity?
 }

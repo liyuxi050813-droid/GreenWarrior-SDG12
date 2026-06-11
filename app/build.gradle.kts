@@ -63,7 +63,25 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.compose.material:material-icons-extended")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.7.0-alpha11")
+    implementation("androidx.room:room-ktx:2.7.0-alpha11")
+    ksp("androidx.room:room-compiler:2.7.0-alpha11")
+
+    // Retrofit + Gson (API 集成)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Lifecycle + Coroutines for API calls
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+
+    // Google Play Services — Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    // Firebase BoM + Cloud Sync
+    implementation(platform("com.google.firebase:firebase-bom:34.14.1"))
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-analytics")
 }
+
+apply(plugin = "com.google.gms.google-services")

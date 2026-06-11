@@ -16,4 +16,9 @@ class AppRepository(private val dao: AppDao) {
     // 用户设置
     suspend fun getProfileSettings(): ProfileSettingsEntity? = dao.getProfileSettings()
     suspend fun saveProfileSettings(settings: ProfileSettingsEntity) = dao.saveProfileSettings(settings)
+
+    // ===== 天气缓存 =====
+    suspend fun saveWeather(weather: WeatherEntity) = dao.saveWeather(weather)
+    fun getWeatherFlow(): Flow<WeatherEntity?> = dao.getWeatherFlow()
+    suspend fun getWeatherOnce(): WeatherEntity? = dao.getWeatherOnce()
 }

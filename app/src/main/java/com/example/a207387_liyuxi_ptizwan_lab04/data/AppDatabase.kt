@@ -11,9 +11,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         ActivityRecordEntity::class,
         CustomTaskEntity::class,
-        ProfileSettingsEntity::class
+        ProfileSettingsEntity::class,
+        WeatherEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +37,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // 数据库版本 2 → 3 迁移：新增 weather_cache 表
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS weather_cache (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        temperature REAL NOT NULL,
+                        windSpeed REAL NOT NULL,
+                        weatherCode INTEGER NOT NULL,
+                        weatherDescription TEXT NOT NULL,
+                        weatherEmoji TEXT NOT NULL,
+                        dailyMaxTemp TEXT NOT NULL DEFAULT '',
+                        dailyMinTemp TEXT NOT NULL DEFAULT '',
+                        dailyWeatherCodes TEXT NOT NULL DEFAULT '',
+                        dailyDates TEXT NOT NULL DEFAULT '',
+                        carbonTip TEXT NOT NULL DEFAULT '',
+                        lastUpdated INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -43,7 +66,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "ecotracker_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { INSTANCE = it }
             }
